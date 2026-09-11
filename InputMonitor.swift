@@ -1,90 +1,86 @@
 import Foundation
-import GameController
 import UIKit
 
 @MainActor
 final class InputMonitor: ObservableObject {
-    @Published var pseudoTapCount = 0
-    @Published var pseudoDragCount = 0
-    @Published var pseudoTapX: Double = 0
-    @Published var pseudoTapY: Double = 0
-    @Published var detectorState = "BEKLİYOR"
-    @Published var gestureDistance: Double = 0
-    @Published var gestureDurationMs: Double = 0
+    @Published var tapCount = 0
+    @Published var doubleTapCount = 0
+    @Published var longPressCount = 0
+    @Published var dragCount = 0
+    @Published var swipeCount = 0
+    @Published var x: Double = 0
+    @Published var y: Double = 0
+    @Published var state = "HAZIR"
 
+    private var lastPoint: CGPoint?
+    private var startPoint: CGPoint?
+    private var startTime: Date?
+    private var lastEventTime = Date.distantPast
     private var settleTask: Task<Void, Never>?
-    private var gestureStartPoint: CGPoint?
-    private var lastPoint = CGPoint.zero
-    private var gestureStartTime: ContinuousClock.Instant?
+    private var lastTapTime = Date.distantPast
     private var totalDistance: CGFloat = 0
-    private var gestureActive = false
 
-    func feedPoint(_ p: CGPoint) {
-        if !gestureActive {
-            gestureActive = true
-            gestureStartPoint = p
+    func point(_ p: CGPoint) {
+        x = p.x; y = p.y
+        let now = Date()
+
+        if now.timeIntervalSince(lastEventTime) > 0.28 || startPoint == nil {
+            startPoint = p
             lastPoint = p
-            gestureStartTime = .now
+            startTime = now
             totalDistance = 0
-            detectorState = "HAREKET"
-        } else {
-            let d = hypot(p.x - lastPoint.x, p.y - lastPoint.y)
-            if d > 0.3 {
-                totalDistance += d
-                lastPoint = p
-                detectorState = "HAREKET"
-            }
+            state = "TEMAS"
+        } else if let lp = lastPoint {
+            totalDistance += hypot(p.x-lp.x, p.y-lp.y)
+            lastPoint = p
+            state = totalDistance > 45 ? "SÜRÜKLEME" : "TEMAS"
         }
+        lastEventTime = now
 
         settleTask?.cancel()
         settleTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(180))
+            try? await Task.sleep(for: .milliseconds(230))
             guard !Task.isCancelled else { return }
-            await MainActor.run {
-                self?.finishGesture(at: p)
-            }
+            await MainActor.run { self?.finish(at: p) }
         }
     }
 
-    private func finishGesture(at p: CGPoint) {
-        guard gestureActive else { return }
+    private func finish(at p: CGPoint) {
+        guard let started = startTime else { return }
+        let duration = Date().timeIntervalSince(started)
+        let d = totalDistance
 
-        let duration: Double
-        if let start = gestureStartTime {
-            duration = Double(start.duration(to: .now).components.attoseconds) / 1e15
+        if d < 28 {
+            if duration >= 0.75 {
+                longPressCount += 1
+                state = "UZUN BASMA"
+            } else if Date().timeIntervalSince(lastTapTime) < 0.48 {
+                doubleTapCount += 1
+                state = "ÇİFT DOKUNMA"
+                lastTapTime = .distantPast
+            } else {
+                tapCount += 1
+                state = "DOKUNMA"
+                lastTapTime = Date()
+            }
+        } else if d > 160 && duration < 0.9 {
+            swipeCount += 1
+            state = "KAYDIRMA"
         } else {
-            duration = 0
+            dragCount += 1
+            state = "SÜRÜKLEME"
         }
 
-        gestureDistance = Double(totalDistance)
-        gestureDurationMs = duration
-
-        // Kısa mesafeli hareket = TAP adayı, uzun hareket = DRAG adayı.
-        if totalDistance <= 35 {
-            pseudoTapCount += 1
-            pseudoTapX = p.x
-            pseudoTapY = p.y
-            detectorState = "TAP"
-        } else {
-            pseudoDragCount += 1
-            detectorState = "DRAG"
-        }
-
-        gestureActive = false
-        gestureStartPoint = nil
-        gestureStartTime = nil
+        startPoint = nil
+        lastPoint = nil
+        startTime = nil
         totalDistance = 0
     }
 
-    func clear() {
-        pseudoTapCount = 0
-        pseudoDragCount = 0
-        pseudoTapX = 0
-        pseudoTapY = 0
-        detectorState = "BEKLİYOR"
-        gestureDistance = 0
-        gestureDurationMs = 0
-        gestureActive = false
+    func reset() {
+        tapCount=0; doubleTapCount=0; longPressCount=0; dragCount=0; swipeCount=0
+        x=0; y=0; state="HAZIR"
+        startPoint=nil; lastPoint=nil; startTime=nil; totalDistance=0
         settleTask?.cancel()
     }
 }

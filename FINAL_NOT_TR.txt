@@ -1,0 +1,4 @@
+P14 Touch Bridge - Final Trial
+Tek motor içinde TAP, çift TAP, uzun basma, drag ve swipe sınıflandırması.
+P14 koordinat hareketini uygulama içinde yorumlar.
+iOS sistem geneline sentetik dokunma enjekte etmez.
