@@ -1,0 +1,5 @@
+P14 Touch Bridge V5
+- Hareket kümeleri 180 ms boşlukla ayrılır.
+- Toplam hareket <= 35 px ise TAP, daha büyükse DRAG sayılır.
+- Son TAP koordinatı, hareket mesafesi ve süre gösterilir.
+- Amaç: down/up sinyali olmadan tap ile sürüklemeyi pratikte ayırabilmek.
