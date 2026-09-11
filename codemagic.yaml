@@ -11,15 +11,10 @@ workflows:
       - name: Locate project
         script: |
           set -e
-          echo "Current directory:"
-          pwd
-          echo
-          echo "Repository contents:"
-          find . -maxdepth 4 -print | sort
-          echo
           PROJECT_PATH="$(find "$CM_BUILD_DIR" -type d -name 'P14TouchBridge.xcodeproj' | head -n 1)"
           if [ -z "$PROJECT_PATH" ]; then
-            echo "ERROR: P14TouchBridge.xcodeproj could not be found anywhere in the cloned repository."
+            echo "ERROR: P14TouchBridge.xcodeproj not found."
+            find "$CM_BUILD_DIR" -maxdepth 4 -print | sort
             exit 66
           fi
           echo "Found project at: $PROJECT_PATH"
@@ -32,34 +27,35 @@ workflows:
           xcodebuild -version
           xcodebuild -project "$PROJECT_PATH" -list
 
-      - name: Resolve project
-        script: |
-          set -e
-          source "$CM_ENV"
-          xcodebuild             -project "$PROJECT_PATH"             -scheme "P14TouchBridge"             -showBuildSettings > /tmp/buildsettings.txt
-          head -120 /tmp/buildsettings.txt
-
-      - name: Build unsigned archive
+      - name: Build unsigned iPhone app
         script: |
           set -e
           source "$CM_ENV"
           rm -rf "$CM_BUILD_DIR/build"
           mkdir -p "$CM_BUILD_DIR/build"
-          xcodebuild clean archive             -project "$PROJECT_PATH"             -scheme "P14TouchBridge"             -configuration Release             -sdk iphoneos             -destination "generic/platform=iOS"             -archivePath "$CM_BUILD_DIR/build/P14TouchBridge.xcarchive"             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+          xcodebuild clean build             -project "$PROJECT_PATH"             -scheme "P14TouchBridge"             -configuration Release             -sdk iphoneos             -destination "generic/platform=iOS"             -derivedDataPath "$CM_BUILD_DIR/build/DerivedData"             PRODUCT_BUNDLE_IDENTIFIER="com.ceto.P14TouchBridge"             CODE_SIGNING_ALLOWED=NO             CODE_SIGNING_REQUIRED=NO             AD_HOC_CODE_SIGNING_ALLOWED=NO
+
+      - name: Verify bundle identifier
+        script: |
+          set -e
+          APP_PATH="$(find "$CM_BUILD_DIR/build/DerivedData/Build/Products/Release-iphoneos" -maxdepth 1 -type d -name 'P14TouchBridge.app' | head -n 1)"
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: Built .app not found."
+            find "$CM_BUILD_DIR/build" -maxdepth 6 -print | sort
+            exit 1
+          fi
+          echo "APP_PATH=$APP_PATH" >> "$CM_ENV"
+          echo "Bundle identifier:"
+          /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Info.plist"
 
       - name: Package unsigned IPA
         script: |
           set -e
-          APP_PATH="$CM_BUILD_DIR/build/P14TouchBridge.xcarchive/Products/Applications/P14TouchBridge.app"
-          if [ ! -d "$APP_PATH" ]; then
-            echo "App bundle not found: $APP_PATH"
-            exit 1
-          fi
-
+          source "$CM_ENV"
           rm -rf "$CM_BUILD_DIR/build/Payload"
           mkdir -p "$CM_BUILD_DIR/build/Payload"
           cp -R "$APP_PATH" "$CM_BUILD_DIR/build/Payload/"
-
           cd "$CM_BUILD_DIR/build"
           rm -f P14TouchBridge-unsigned.ipa
           zip -qry P14TouchBridge-unsigned.ipa Payload
@@ -67,4 +63,3 @@ workflows:
 
     artifacts:
       - build/P14TouchBridge-unsigned.ipa
-      - build/P14TouchBridge.xcarchive

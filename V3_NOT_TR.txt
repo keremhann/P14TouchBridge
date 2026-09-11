@@ -1,0 +1,8 @@
+V3 düzeltmesi:
+- Info.plist içine CFBundleIdentifier ve standart iOS bundle anahtarları eklendi.
+- İlk test için xcodebuild archive yerine unsigned xcodebuild build kullanılıyor.
+- Build sonunda gerçek .app Info.plist içindeki bundle identifier doğrulanıyor.
+- Sonra unsigned IPA paketleniyor.
+
+Mevcut GitHub reposunu kullan. Yeni repo açma.
+Bu paketteki dosyaları mevcut repo köküne yükleyip eski dosyaların üzerine yaz.
