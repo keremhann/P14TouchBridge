@@ -1,0 +1,5 @@
+P14 Touch Bridge V4
+- P14 hareket koordinatından geçici TAP üretme testi eklendi.
+- Hareket 220 ms durduğunda TAP sayacı bir artar.
+- TAP koordinatı ekranda gösterilir.
+- Bu sürüm henüz sistem çapında iOS dokunuşu enjekte etmez; yalnızca giriş davranışını test eder.

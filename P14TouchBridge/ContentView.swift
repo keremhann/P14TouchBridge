@@ -8,70 +8,48 @@ struct ContentView: View {
             TouchProbeView(monitor: monitor)
                 .ignoresSafeArea()
 
-            VStack(spacing: 14) {
-                Text("P14 TOUCH BRIDGE")
+            VStack(spacing: 16) {
+                Text("P14 TOUCH BRIDGE V4")
                     .font(.title2.bold())
 
-                Text("TEST 1 — INPUT DIAGNOSTIC")
+                Text("TAP EMÜLASYON TESTİ")
                     .font(.caption.monospaced())
 
-                GroupBox("USB / Mouse verisi") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        row("GCMouse", monitor.mouseConnected ? "BAĞLI ✅" : "YOK ❌")
-                        row("Delta X", f(monitor.deltaX))
-                        row("Delta Y", f(monitor.deltaY))
-                        row("Sol tık", monitor.leftPressed ? "BASILI" : "BIRAKILDI")
-                        row("Scroll X", f(monitor.scrollX))
-                        row("Scroll Y", f(monitor.scrollY))
-                    }
-                }
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(.blue.opacity(0.14))
+                    .overlay(
+                        VStack(spacing: 12) {
+                            Text("TAP TEST")
+                                .font(.largeTitle.bold())
+                            Text("\(monitor.pseudoTapCount)")
+                                .font(.system(size: 72, weight: .black, design: .rounded))
+                            Text(monitor.detectorState)
+                                .font(.headline.monospaced())
+                            Text("X \(f(monitor.pseudoTapX))   Y \(f(monitor.pseudoTapY))")
+                                .monospacedDigit()
+                        }
+                    )
+                    .frame(maxHeight: 330)
 
-                GroupBox("iOS koordinatları") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        row("Hover X", f(monitor.hoverX))
-                        row("Hover Y", f(monitor.hoverY))
-                        row("Touch X", f(monitor.touchX))
-                        row("Touch Y", f(monitor.touchY))
-                        row("Touch state", monitor.touchState)
-                        row("Event", "\(monitor.eventCount)")
-                    }
-                }
-
-                Text("P14'te köşelere dokun ve parmağını sürükle. Özellikle Hover X/Y ile Touch X/Y değerlerine bak.")
+                Text("P14 üzerinde parmağını kısa bir mesafe hareket ettirip durdur. Hareket 220 ms durduğunda V4 bunu geçici olarak TAP kabul eder.")
                     .font(.footnote)
                     .multilineTextAlignment(.center)
 
+                Text("Bu aşama yalnızca P14 hareketinden güvenilir bir TAP olayı türetip türetemediğimizi test eder.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
                 Spacer()
 
-                Text("Amaç: P14'ün relative mouse verisini iOS içindeki mutlak pointer koordinatına çevirebiliyor muyuz?")
-                    .font(.caption2)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
+                Button("Sıfırla") { monitor.clear() }
+                    .buttonStyle(.borderedProminent)
             }
             .padding()
-            .allowsHitTesting(false)
-
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button("Sıfırla") { monitor.clear() }
-                        .buttonStyle(.borderedProminent)
-                        .padding()
-                }
-            }
-        }
-    }
-
-    private func row(_ name: String, _ value: String) -> some View {
-        HStack {
-            Text(name)
-            Spacer()
-            Text(value).monospacedDigit()
         }
     }
 
     private func f(_ v: Double) -> String {
-        String(format: "%.2f", v)
+        String(format: "%.0f", v)
     }
 }
